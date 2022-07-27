@@ -1,4 +1,4 @@
-import React, {useState, useRef} from "react"
+import React, {useState, useRef, useEffect, useLayoutEffect } from "react"
 import styled from "styled-components"
 import classNames from "classnames";
 
@@ -155,34 +155,59 @@ export interface IProps {
 }
 export default (props: IProps) => {
     const {dataSelf, initObj} = props
-    const selfRef = useRef(null)
+    const selfRef = useRef<HTMLElement|null>(null)
+    const currentWidth = useRef('')
     const [expandToggle, setExpandToggle] = useState(false)
     const rootClasses = classNames({
         'c-root': true,
         'c-root-expanding': expandToggle,
     })
+
     const click$At = (ev)=>{
         setExpandToggle((self)=>{ return !self})
+        currentWidth.current = selfRef.current?getComputedStyle(selfRef.current).width:''
     }
+
+    useLayoutEffect (()=>{
+        if(selfRef.current != null){
+            if(expandToggle){
+                selfRef.current.style.minWidth = ''
+                selfRef.current.style.maxWidth = currentWidth.current
+                setTimeout(()=>{
+                    if(selfRef.current != null)
+                    selfRef.current.style.maxWidth =  '500px'
+                }, 0)
+            }else{
+                selfRef.current.style.maxWidth = ''
+                selfRef.current.style.minWidth = currentWidth.current
+
+                setTimeout(()=>{
+                    if(selfRef.current != null)
+                    selfRef.current.style.minWidth = '0px'
+                }, 0)
+            }
+        }
+    }, [expandToggle])
+
     return (
         <Styled className={rootClasses} ref={selfRef} onClick={click$At}>
             <div className="c-root-add">
-                {initObj?.textAdd} <div className="c-root-add-symbol" v-if="expandToggle==false">{textSymbols.add}</div>
-                <div className="c-root-expendable" >
-                    {
-                        initObj&&initObj.inputSchema.map((_inputSchema)=>{
-                            if(_inputSchema.type==='text'){
-                                return (
-                                    <div className="c-root-expendable-i_text" key={_inputSchema.id}>
-                                        <label htmlFor={_inputSchema.id} >{_inputSchema.label}</label>
-                                        <input type="text" id={_inputSchema.id} />
-                                    </div>
-                                )
-                            }
-                        })
-                    }
-                </div>
-            </div>            
+                {initObj?.textAdd} { (expandToggle!=true)&&<div className="c-root-add-symbol">{textSymbols.add}</div>}
+            </div>
+            <div className="c-root-expendable" >
+                {
+                    initObj&&initObj.inputSchema.map((_inputSchema)=>{
+                        if(_inputSchema.type==='text'){
+                            return (
+                                <div className="c-root-expendable-i_text" key={_inputSchema.id}>
+                                    <label htmlFor={_inputSchema.id} >{_inputSchema.label}</label>
+                                    <input type="text" id={_inputSchema.id} />
+                                </div>
+                            )
+                        }
+                    })
+                }
+            </div>
         </Styled>
     )
 }
