@@ -1,6 +1,8 @@
 import React, {useState, useRef, useEffect, useLayoutEffect } from "react"
 import styled from "styled-components"
 import classNames from "classnames";
+import {initObjType} from './MyCompo.d.ts'
+
 
 const textSymbols = {
     add: "+",
@@ -150,23 +152,62 @@ const Styled = styled.div`
 `
 
 export interface IProps {
-    initObj?: any,
+    initObj: initObjType|null,
     dataSelf?: any
 }
 export default (props: IProps) => {
-    const {dataSelf, initObj} = props
+    const [rerenderTriger, setRerenderTriger] = useState(0)
+    const {dataSelf, initObj}= props
+    
     const selfRef = useRef<HTMLElement|null>(null)
     const currentWidth = useRef('')
     const [expandToggle, setExpandToggle] = useState(false)
+    const multiselectMapRefInitFlag = useRef(false)
+    const multiselectMapRef = useRef(new WeakMap())
     const rootClasses = classNames({
         'c-root': true,
         'c-root-expanding': expandToggle,
     })
+    let multiselect = []
+    if (initObj && multiselectMapRefInitFlag.current==false) {//only invoke once
+        multiselect = initObj.inputSchema.filter(x=>x.type==='multiselect')
+        multiselect.forEach((el)=>{
+            multiselectMapRef.current.set(el, {
+                editMode:false,
+                top:'0'
+            })
+        })
+        multiselectMapRefInitFlag.current = true
+    }
+    
+    
 
     const click$At = (ev)=>{
         setExpandToggle((self)=>{ return !self})
         currentWidth.current = selfRef.current?getComputedStyle(selfRef.current).width:''
     }
+    const onMultiselectAdd=(target, ev)=>{
+        if(target.editMode == false){
+            const targetStyle = getComputedStyle(ev.target.closest('.c-root-expendable-i_multiselect').querySelector('.c-root-expendable-i-selectbox'))
+            const top = parseFloat(targetStyle.height, 10) + parseFloat(targetStyle.paddingTop, 10) + parseFloat(targetStyle.paddingBottom, 10) + "px"
+            target.editMode = true
+            target.top = `-${top}`
+        }else{
+            target.editMode = false
+            target.top = `0px`
+        }
+        setRerenderTriger(x=>x+=1)
+    }
+    const getMultiselectClasses = (inputItem: any)=>{
+        let multiselectClassRaw : any= 
+        {
+            'c-root-expendable-i_multiselect': true,
+        }
+        multiselectClassRaw[`c-root-expendable-i_multiselect-${multiselectMapRef.current.get(inputItem).editMode?'A':'B'}`]
+        return classNames(multiselectClassRaw)
+    }
+    
+    
 
     useLayoutEffect (()=>{
         if(selfRef.current != null){
@@ -196,15 +237,89 @@ export default (props: IProps) => {
             </div>
             <div className="c-root-expendable" >
                 {
-                    initObj&&initObj.inputSchema.map((_inputSchema)=>{
-                        if(_inputSchema.type==='text'){
-                            return (
-                                <div className="c-root-expendable-i_text" key={_inputSchema.id}>
-                                    <label htmlFor={_inputSchema.id} >{_inputSchema.label}</label>
-                                    <input type="text" id={_inputSchema.id} />
-                                </div>
-                            )
-                        }
+                    initObj&&initObj.inputSchema.map((inputItem)=>{
+                        return (
+                            <div className="c-root-expendable-i" onClick={(ev)=>{ev.stopPropagation()}} key={inputItem.id}>
+                                {
+                                    inputItem.type==='text' && //if text
+                                    <div className="c-root-expendable-i_text" >
+                                        <label htmlFor={inputItem.id} >{inputItem.label}</label>
+                                        <input type="text" id={inputItem.id} />
+                                    </div>
+                                }
+                                {
+                                    inputItem.type==='multiselect' &&(
+                                        
+                                        <div className={getMultiselectClasses(inputItem)} >
+                                            <div style={{display:'flex'}}> 
+                                                <span>{inputItem.label}</span> 
+                                                <div 
+                                                    className={classNames({
+                                                        'c-root-expendable-i_multiselect-add': !multiselectMapRef.current.get(inputItem).editMode,
+                                                        'c-root-expendable-i_multiselect-minus': multiselectMapRef.current.get(inputItem).editMode
+                                                    })}
+                                                    onClick={(ev)=>{
+                                                        onMultiselectAdd(multiselectMapRef.current.get(inputItem), ev)
+                                                    }}
+                                                    >
+                                                    <span>{multiselectMapRef.current.get(inputItem).editMode?textSymbols.minus:textSymbols.add}</span>
+                                                </div> 
+                                            </div>
+                                            
+                                            <div className="c-root-expendable-i-selectbox-wrapper">
+                                                <div className="c-root-expendable-i-selectbox-inner">
+                                                    <div className="c-root-expendable-i-selectbox" style={{marginTop:multiselectMapRef.current.get(inputItem).top}}>
+                                                        {
+                                                            inputItem.selected.map((tag)=>{
+                                                                return (
+                                                                    <div className="c-root-tags" key={tag.id}>
+                                                                        <div className="c-root-tags-inner">
+                                                                            {tag.text}
+                                                                        </div>
+                                                                        <div className="c-root-tags-delete" id={tag.id} >
+                                                                            <div className="c-root-tags-delete-inner">
+                                                                                {textSymbols.cross}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )
+                                                            })                                                            
+                                                        }
+                                                    </div>
+                                                    <div className={classNames({
+                                                        'c-root-expendable-i-selectbox': true,
+                                                        'c-root-expendable-i-selectbox-edit': true,
+                                                        'c-root-v-collapse': !multiselectMapRef.current.get(inputItem).editMode
+                                                    })} style={{marginTop:'unset'}}>
+                                                        {
+                                                            inputItem
+                                                                .selectable
+                                                                .filter(x=> inputItem.selected.filter(y=>y.id===x.id).length==0)
+                                                                .map((tag)=>{
+                                                                    return (
+                                                                        <div 
+                                                                            className="c-root-tags"
+                                                                            id={tag.id}
+                                                                            >
+                                                                            <div className="c-root-tags-inner">
+                                                                                {tag.text}
+                                                                            </div>
+                                                                        </div>
+                                                                    )
+                                                                })
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>    
+                                        
+                                    )
+                                    
+                                }
+                                
+                            </div>
+                            
+                        )
                     })
                 }
             </div>
