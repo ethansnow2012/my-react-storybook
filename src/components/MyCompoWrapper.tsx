@@ -63,11 +63,13 @@ export interface IProps {
 }
 export default (props: PropsWithChildren<IProps>) => {
     const {children} = props
-    const [data, setData] = useState(null)
+    const [data, setData] = useState<initObjType|null>(null)
     useEffect(()=>{
         const fn = async ()=>{
             const _data = await fakeFetchData()
-            console.log('ddd', _data)
+            //order data here because react setState is order sensitive
+            _data.inputSchema.forEach((x, ii)=>{ x.order = ii})
+            console.log('order', _data)
             setData(_data)
         }
         fn()
@@ -75,7 +77,7 @@ export default (props: PropsWithChildren<IProps>) => {
 
     return (
         <div>
-            {React.cloneElement(props.children, {initObj: data})}
+            {React.cloneElement(props.children, {initObj: data, setInitObj:setData})}
         </div>
     )
 }

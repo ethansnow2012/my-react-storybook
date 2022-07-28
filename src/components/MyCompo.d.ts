@@ -8,7 +8,8 @@ export interface inputSchemaItem  {
     label: String,
     value: String,
     selected?: inputSchemaItem$SelectedTag []
-    selectable?: inputSchemaItem$SelectedTag []
+    selectable?: inputSchemaItem$SelectedTag [],
+    order?:number
 }
 export interface initObjType  {
     textAdd: String,

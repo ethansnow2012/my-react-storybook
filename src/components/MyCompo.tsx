@@ -151,13 +151,16 @@ const Styled = styled.div`
     }
 `
 
+type WithRequired<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>> & Required<T, K>
+type initObjType$ordered = WithRequired<initObjType, 'order'>
 export interface IProps {
-    initObj: initObjType|null,
+    initObj: initObjType$ordered|null,
+    setInitObj: React.Dispatch<React.SetStateAction<initObjType$ordered>>,
     dataSelf?: any
 }
 export default (props: IProps) => {
     const [rerenderTriger, setRerenderTriger] = useState(0)
-    const {dataSelf, initObj}= props
+    const {dataSelf, initObj, setInitObj}= props
     
     const selfRef = useRef<HTMLElement|null>(null)
     const currentWidth = useRef('')
@@ -206,6 +209,50 @@ export default (props: IProps) => {
         multiselectClassRaw[`c-root-expendable-i_multiselect-${multiselectMapRef.current.get(inputItem).editMode?'A':'B'}`]
         return classNames(multiselectClassRaw)
     }
+    const onTagDelete = (inputId, ev)=>{
+        console.log('onTagDelete')
+        const dueId = ev.target.closest('.c-root-tags').querySelector('.c-root-tags-delete').id // to be deleted
+        setInitObj((self:initObjType$ordered|null)=>{
+            if(self==null){return null }
+
+            const dueSchema =  self.inputSchema.filter(x=>x.id==inputId)[0]
+            const restSchema = self.inputSchema.filter(x=>x.id!=inputId)
+            if(dueSchema.selected){
+                dueSchema.selected = [...dueSchema.selected.filter(x=>x.id!=dueId)]
+            }
+
+            return { //effect
+                ...self, 
+                inputSchema: [
+                    ...restSchema,
+                    dueSchema
+                ]
+            }
+        })
+    }
+    const onTagAdd = (target, inputId, ev) => {
+        const dueId = ev.target.closest('.c-root-tags').id // to be deleted
+        setInitObj((self:initObjType$ordered|null)=>{
+            if(self==null){return null }
+
+            let dueSchema =  self.inputSchema.filter(x=>x.id==inputId)[0]
+            const restSchema = self.inputSchema.filter(x=>x.id!=inputId)
+            const tagToAdd = dueSchema.selectable?.filter(x=>x.id==dueId)[0]
+
+            if(dueSchema.selected && tagToAdd){
+                dueSchema.selected = [...dueSchema.selected, tagToAdd]
+            }
+            target.editMode = false //
+            target.top = "0px"
+            return { 
+                ...self, 
+                inputSchema: [
+                    ...restSchema,
+                    dueSchema
+                ]
+            }
+        })
+    }
     
     
 
@@ -237,7 +284,7 @@ export default (props: IProps) => {
             </div>
             <div className="c-root-expendable" >
                 {
-                    initObj&&initObj.inputSchema.map((inputItem)=>{
+                    initObj&&initObj.inputSchema.sort((a, b)=>(a.order??-1) - (b.order??-1)).map((inputItem)=>{
                         return (
                             <div className="c-root-expendable-i" onClick={(ev)=>{ev.stopPropagation()}} key={inputItem.id}>
                                 {
@@ -276,7 +323,7 @@ export default (props: IProps) => {
                                                                         <div className="c-root-tags-inner">
                                                                             {tag.text}
                                                                         </div>
-                                                                        <div className="c-root-tags-delete" id={tag.id} >
+                                                                        <div className="c-root-tags-delete" id={tag.id}  onClick={(ev)=>{onTagDelete(inputItem.id, ev)}}>
                                                                             <div className="c-root-tags-delete-inner">
                                                                                 {textSymbols.cross}
                                                                             </div>
@@ -299,7 +346,9 @@ export default (props: IProps) => {
                                                                     return (
                                                                         <div 
                                                                             className="c-root-tags"
+                                                                            key={tag.id}
                                                                             id={tag.id}
+                                                                            onClick={(ev)=>{onTagAdd(multiselectMapRef.current.get(inputItem), inputItem.id, ev)}}
                                                                             >
                                                                             <div className="c-root-tags-inner">
                                                                                 {tag.text}

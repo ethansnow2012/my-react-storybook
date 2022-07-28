@@ -5,7 +5,7 @@ import MyCompoWrapper from "./MyCompoWrapper";
 
 
     
-storiesOf("ColorButton2", module)
+storiesOf("MyCompo", module)
     .add("MyCompo",
         () => {
             const dataSelf = 'yoooo'
