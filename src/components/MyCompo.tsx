@@ -2,7 +2,7 @@ import React, {useState, useRef, useEffect, useLayoutEffect } from "react"
 import styled from "styled-components"
 import classNames from "classnames";
 import {initObjType} from './MyCompo.d.ts'
-
+import useOnClickOutside from '../hooks/useOnClickOutside'
 
 const textSymbols = {
     add: "+",
@@ -184,6 +184,9 @@ export default (props: IProps) => {
     }
     
     
+    useOnClickOutside(selfRef, ()=>{
+        setExpandToggle(false)
+    })
 
     const click$At = (ev)=>{
         setExpandToggle((self)=>{ return !self})
